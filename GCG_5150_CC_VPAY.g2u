@@ -1,0 +1,205 @@
+Program.Sub.ScreenSU.Start
+Gui.SELECT..Create
+Gui.SELECT..Size(5355,2805)
+Gui.SELECT..MinX(0)
+Gui.SELECT..MinY(0)
+Gui.SELECT..Position(0,0)
+Gui.SELECT..BackColor(-2147483633)
+Gui.SELECT..MousePointer(0)
+Gui.SELECT..Event(UnLoad,Form_UnLoad)
+Gui.SELECT.dtpStart.Create(DatePicker)
+Gui.SELECT.dtpStart.Size(1935,285)
+Gui.SELECT.dtpStart.Position(345,630)
+Gui.SELECT.dtpEnd.Create(DatePicker)
+Gui.SELECT.dtpEnd.Size(1935,285)
+Gui.SELECT.dtpEnd.Position(2820,630)
+Gui.SELECT.cmdOK.Create(Button)
+Gui.SELECT.cmdOK.Size(855,375)
+Gui.SELECT.cmdOK.Position(1260,1335)
+Gui.SELECT.cmdOK.Caption("OK")
+Gui.SELECT.cmdOK.Event(Click,cmdOK_Click)
+Gui.SELECT.cmdCancel.Create(Button)
+Gui.SELECT.cmdCancel.Size(855,375)
+Gui.SELECT.cmdCancel.Position(2760,1320)
+Gui.SELECT.cmdCancel.Caption("CANCEL")
+Gui.SELECT.cmdCancel.Event(Click,cmdCancel_Click)
+Gui.Form..Create
+Gui.Form..Caption("PAYMENTS MADE")
+Gui.Form..Size(15360,7665)
+Gui.Form..MinX(0)
+Gui.Form..MinY(0)
+Gui.Form..Position(0,0)
+Gui.Form..BackColor(-2147483633)
+Gui.Form..MaxButton(False)
+Gui.Form..MinButton(False)
+Gui.Form..MousePointer(0)
+Gui.Form..Sizeable(False)
+Gui.Form..Event(UnLoad,Form_UnLoad)
+Gui.Form.GGC_TRANS.Create(GsGridControl)
+Gui.Form.GGC_TRANS.Size(14775,5910)
+Gui.Form.GGC_TRANS.Position(165,390)
+Gui.Form.cmdCancel.Create(Button)
+Gui.Form.cmdCancel.Size(1530,375)
+Gui.Form.cmdCancel.Position(300,6600)
+Gui.Form.cmdCancel.Caption("CANCEL")
+Gui.Form.cmdCancel.Event(Click,cmdCancel_Click1)
+Gui.Form.cmdExport.Create(Button)
+Gui.Form.cmdExport.Size(1530,375)
+Gui.Form.cmdExport.Position(13140,6600)
+Gui.Form.cmdExport.Caption("EXPORT")
+Gui.Form.cmdExport.Event(Click,cmdExport_Click)
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+f.Intrinsic.Control.Try
+v.Local.sError.Declare
+
+'open the date picker
+gui.SELECT..Show
+
+F.Intrinsic.Control.ExitSub
+
+f.Intrinsic.Control.catch
+f.Intrinsic.Control.CallSub(catching,"sub",v.Ambient.CurrentSubroutine,"errorno",v.Ambient.ErrorNumber,"errordesc",v.Ambient.ErrorDescription,"program",v.Ambient.ScriptFile)
+f.Intrinsic.Control.EndTry
+Program.Sub.Main.End
+
+Program.Sub.cmdCancel_Click.Start
+Program.Sub.cmdCancel_Click.End
+
+Program.Sub.cmdOK_Click.Start
+f.Intrinsic.Control.Try
+v.Local.sError.Declare
+v.Local.dStart.Declare
+v.Local.dEnd.Declare
+v.Local.sSql.Declare
+V.Local.sLastVen.Declare
+v.Local.iCount.Declare
+v.Local.iTrans.Declare
+
+'Function.Intrinsic.Debug.InvokeDebugger
+'Function.Intrinsic.Debug.Stop
+
+v.Local.dStart.Set(v.Screen.SELECT!dtpStart.text)
+v.Local.dEnd.Set(v.Screen.SELECT!dtpEnd.text)
+'Function.Intrinsic.Debug.InvokeDebugger
+'Function.Intrinsic.Debug.Stop
+
+'close the date screen
+gui.SELECT..Visible(false)
+'build selection criteria
+f.Intrinsic.String.Build("SELECT CAST(0 AS INTEGER) AS PAYMENT_ID, A.VENDOR, A.AMT_INVOICE - A.DISCOUNT_INVOICE AS PAYMENT_AMOUNT, V.NAME_VENDOR, CAST('1000' AS CHAR(8)) AS PAYING_COMPANY,  A.INVOICE, A.DATE_INVOICE AS INVOICE_DATE, A.AMT_INVOICE AS GROSS_INVOICE, A.DISCOUNT_INVOICE AS DISCOUNT_AMT, A.PURCHASE_ORDER FROM V_AP_OPEN_ITEMS A LEFT JOIN V_VENDOR_MASTER V ON A.VENDOR = V.VENDOR WHERE A.DATE_BATCH BETWEEN '{0}' AND '{1}' AND BATCH_CODE = '10' AND PAY_WITH_CCARD = 'Y'",V.Local.dStart.PervasiveDate,V.Local.dEnd.PervasiveDate,V.Local.sSql)
+
+'open connection and create datatable
+f.ODBC.Connection!COREDB.opencompanyconnection
+f.Data.DataTable.CreateFromSQL("CCTRANS","COREDB",V.Local.sSql,True)
+
+'create the view to loop through records
+f.Data.DataView.Create("CCTRANS","V_CCTRANS",22,"","VENDOR")
+
+'read the option for the starting value +1
+f.Global.General.ReadOption("400460",3,0,"0002",v.Local.iTrans)
+
+'LOOP and set "PAYMENT ID" from readoption(400360)
+'we are using the "auto-number" part value to store and generate the payment id's.  Payment ID is unique to vendor.  This customer does NOT user auto-number parts.
+f.Intrinsic.Control.For(V.Local.iCount,0,v.DataView.CCTRANS!V_CCTRANS.RowCount--,1)
+	F.Intrinsic.Control.If(V.DataView.CCTRANS!V_CCTRANS(V.Local.iCount).VENDOR!FIELDVALTRIM,<>,V.Local.sLastVen)
+		F.Intrinsic.Math.Add(V.Local.iTrans,1,V.Local.iTrans)
+		F.Data.DataView.SetValue("CCTRANS","V_CCTRANS",V.Local.iCount,"PAYMENT_ID",V.Local.iTrans)
+		V.Local.sLastVen.Set(V.DataView.CCTRANS!V_CCTRANS(V.Local.iCount).VENDOR!FIELDVALTRIM)
+	F.Intrinsic.Control.Else
+		F.Data.DataView.SetValue("CCTRANS","V_CCTRANS",V.Local.iCount,"PAYMENT_ID",V.Local.iTrans)
+		V.Local.sLastVen.Set(V.DataView.CCTRANS!V_CCTRANS(V.Local.iCount).VENDOR!FIELDVALTRIM)
+	f.Intrinsic.Control.EndIf
+f.Intrinsic.Control.Next(V.Local.iCount)
+
+'update the company option for the next run
+f.Global.General.SaveOption(400460,2,False,"","","",0,v.Ambient.Date,v.Local.iTrans)
+
+f.Intrinsic.Control.CallSub(buildviews)
+
+F.Intrinsic.Control.ExitSub
+
+f.Intrinsic.Control.catch
+f.Intrinsic.Control.CallSub(catching,"sub",v.Ambient.CurrentSubroutine,"errorno",v.Ambient.ErrorNumber,"errordesc",v.Ambient.ErrorDescription,"program",v.Ambient.ScriptFile)
+f.Intrinsic.Control.EndTry
+Program.Sub.cmdOK_Click.End
+
+Program.Sub.cmdSave_Click.Start
+Program.Sub.cmdSave_Click.End
+
+Program.Sub.cmdCancel_Click1.Start
+f.Intrinsic.Control.End
+Program.Sub.cmdCancel_Click1.End
+
+Program.Sub.cmdExport_Click.Start
+f.Intrinsic.Control.Try
+v.Local.sError.Declare
+v.Local.sDir.Declare
+v.Local.sFile.Declare
+v.Local.sDate.Declare
+v.Local.sTime.Declare
+V.Local.iCount.Declare
+v.Local.sTemp.Declare
+v.Local.sField.Declare
+v.Local.sRow.Declare
+
+'vpay_YYYYMMDD-HHMM.txt
+'\\fileshare64\finance\VirtualPay\Auto\
+
+
+F.Intrinsic.StringBuilder.Create("FILE")
+
+f.Intrinsic.Control.For(v.Local.iCount,0,v.DataView.CCTRANS!V_CCTRANS.RowCount--,1)
+	v.Local.sTemp.Set(v.DataView.CCTRANS!V_CCTRANS(v.Local.iCount).NAME_VENDOR!FIELDVALTRIM)
+	f.Intrinsic.String.Replace(v.Local.sTemp,",","",v.Local.sTemp)
+	f.Intrinsic.String.Build("{0},{1},{2},{3},{4},{5}",v.DataView.CCTRANS!V_CCTRANS(v.Local.iCount).PAYMENT_ID!FIELDVALTRIM,v.DataView.CCTRANS!V_CCTRANS(v.Local.iCount).VENDOR!FIELDVALTRIM,v.DataView.CCTRANS!V_CCTRANS(v.Local.iCount).PAYMENT_AMOUNT!FIELDVALTRIM,v.Local.sTemp,"1000",v.DataView.CCTRANS!V_CCTRANS(v.Local.iCount).INVOICE!FIELDVALTRIM,V.Local.sField)
+	V.Local.sTemp.Set(v.DataView.CCTRANS!V_CCTRANS(v.Local.iCount).INVOICE_DATE!FIELDVALTRIM)
+	F.Intrinsic.String.Format(V.Local.sTemp,"MM/DD/YYYY",V.Local.sTemp)
+	F.Intrinsic.String.Build("{0},{1},{2},{3},{4}",V.Local.sField,V.Local.sTemp,v.DataView.CCTRANS!V_CCTRANS(v.Local.iCount).GROSS_INVOICE!FIELDVALTRIM,v.DataView.CCTRANS!V_CCTRANS(v.Local.iCount).DISCOUNT_AMT!FIELDVALTRIM,v.DataView.CCTRANS!V_CCTRANS(v.Local.iCount).PURCHASE_ORDER!FIELDVALTRIM,V.Local.sRow)
+	f.Intrinsic.stringbuilder.appendline("FILE",v.Local.sRow)
+f.Intrinsic.Control.Next(v.Local.iCount)
+
+f.Intrinsic.stringbuilder.tostring("FILE",v.Local.sFile)
+
+
+f.Intrinsic.String.Format(v.Ambient.Date,"YYYYMMDD",V.Local.sDate)
+f.Intrinsic.String.Format(v.Ambient.Time,"HHMM",V.Local.sTime)
+
+
+f.Intrinsic.String.Build("\\fileshare64\finance\VirtualPay\Auto\vpay_{0}-{1}.txt",v.Local.sDate,v.Local.sTime,v.Local.sDir)
+
+f.Intrinsic.File.String2File(v.Local.sDir,v.Local.sFile)
+
+f.Intrinsic.UI.Msgbox("Complete")
+
+F.Intrinsic.Control.ExitSub
+
+f.Intrinsic.Control.catch
+f.Intrinsic.Control.CallSub(catching,"sub",v.Ambient.CurrentSubroutine,"errorno",v.Ambient.ErrorNumber,"errordesc",v.Ambient.ErrorDescription,"program",v.Ambient.ScriptFile)
+f.Intrinsic.Control.EndTry
+Program.Sub.cmdExport_Click.End
+
+Program.Sub.buildviews.Start
+f.Intrinsic.Control.Try
+v.Local.sError.Declare
+
+
+GUI.Form.GGC_TRANS.DataSource("CCTRANS")
+GUI.Form.GGC_TRANS.AddGridviewFromDataview("GV_TRANS","CCTRANS","V_CCTRANS")
+
+GUI.Form..Show
+
+F.Intrinsic.Control.ExitSub
+
+f.Intrinsic.Control.catch
+f.Intrinsic.Control.CallSub(catching,"sub",v.Ambient.CurrentSubroutine,"errorno",v.Ambient.ErrorNumber,"errordesc",v.Ambient.ErrorDescription,"program",v.Ambient.ScriptFile)
+f.Intrinsic.Control.EndTry
+Program.Sub.buildviews.End
+
+Program.Sub.Form_UnLoad.Start
+f.Intrinsic.Control.End
+Program.Sub.Form_UnLoad.End
